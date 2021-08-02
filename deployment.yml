@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: i-manmeetdevgun-master
+  name: i-manmeetdevgun-master
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: i-manmeetdevgun-master
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: i-manmeetdevgun-master
+    spec:
+      containers:
+      - image: superuserz/i-manmeetdevgun-master:v1
+        imagePullPolicy: Always
+        name: i-manmeetdevgun-master
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  finalizers:
+  - service.kubernetes.io/load-balancer-cleanup
+  labels:
+    app: i-manmeetdevgun-master
+  name: i-manmeetdevgun-master
+  namespace: default
+spec:
+  ports:
+  - nodePort: 32754
+    port: 30157
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: i-manmeetdevgun-master
+  sessionAffinity: None
+  type: LoadBalancer

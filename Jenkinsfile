@@ -8,11 +8,11 @@ pipeline {
         sonarInstallationName = 'Test_Sonar'
         sonarProjectKey='sonar-manmeetdevgun'
         sonarHost='http://localhost:9000'
-        sonarToken='c1084e0ae20a2a86ee4ba7001da3d9d8575411e7'
-        dockerCredentialsId='DockerHub'
-        username='manmeetdevgun'
-        dockerhubUsername='superuserz'
-        jacocoXMLCoveragePath='target/site/jacoco/jacoco.xml'
+        sonarToken='c1084e0ae20a2a86ee4ba7001da3d9d8575411e7'  //token to bind with sonar project
+        dockerCredentialsId='DockerHub'  //Credentials ID to connect to Docker Hub.
+        username='manmeetdevgun'  //will be used in image name
+        dockerhubUsername='superuserz'  //will be user to push the image to docker
+        jacocoXMLCoveragePath='target/site/jacoco/jacoco.xml'  //path to coverage report
         
     }
     agent any
