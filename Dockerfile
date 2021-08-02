@@ -8,5 +8,6 @@ COPY --from=0 /app/app_manmeetdevgun /app
 RUN mvn package
 
 FROM openjdk:8-jdk-alpine
+EXPOSE 8080
 COPY --from=builder /app/target/*.jar app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]
