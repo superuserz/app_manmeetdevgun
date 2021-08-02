@@ -13,7 +13,12 @@ pipeline {
         username='manmeetdevgun'  //will be used in image name
         dockerhubUsername='superuserz'  //will be user to push the image to docker
         jacocoXMLCoveragePath='target/site/jacoco/jacoco.xml'  //path to coverage report
-        
+        //////////KUBERNETES-CONFIGS/////////
+        deploymentfile = 'deployment.yml'
+        projectId = 'carbon-airlock-321321'
+        clusterName = 'nagp-k8s-jenkins-cluster'
+        clusterLocation = 'us-central1-c'
+        serviceAccountKey = 'gke'
     }
     agent any
     options {
@@ -110,6 +115,31 @@ pipeline {
                         }
                 } 
             }
+			
+		stage('Kubernetes Deployment'){
+            steps{
+                script{
+                    def kubernetesPort = ''
+                    def firewallRuleName = ''
+                    if(env.BRANCH_NAME == 'master'){
+                        kubernetesPort = 30157
+                        firewallRuleName = 'master-node-port'
+                    }
+                    if(env.BRANCH_NAME == 'develop'){
+                        kubernetesPort = 30158
+                        firewallRuleName = 'develop-node-port'
+                    }
+                    bat 'dir'
+                //    kubernetesPort = kubernetesPort.toInteger()
+                    step([$class: 'KubernetesEngineBuilder', projectId: env.projectId, clusterName: env.clusterName, location: env.clusterLocation, manifestPattern: env.deploymentfile, credentialsId: env.serviceAccountKey])
+                    try{
+                        bat "gcloud compute firewall-rules create ${firewallRuleName} --allow tcp:30157 --project ${projectId}"
+                    }catch(Exception e){
+                        // nothing to be done here, just catching exception in case firewall rule already exists
+                    }
+                }
+            }
+        } 
         }//Docker Deploy Stage End
     } //stages
 }//pipline
