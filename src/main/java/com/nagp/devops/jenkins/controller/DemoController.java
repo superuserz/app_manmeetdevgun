@@ -15,4 +15,9 @@ public class DemoController {
 	public String getServerMessage() {
 		return "Hello From Develop Branch";
 	}
+	
+	@GetMapping("/branch")
+	public String getBranchName() {
+		return "Develop";
+	}
 }
