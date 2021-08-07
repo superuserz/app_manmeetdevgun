@@ -178,7 +178,7 @@ pipeline {
 							if(env.BRANCH_NAME == 'develop'){
                             bat "gcloud compute firewall-rules create develop-node-port --allow tcp:${KUBERNETES_DEVELOPPORT} --project ${GCE_PROJECTID}"  //Set appropraie firewall Rile to connect to VM
 							}  
-							} catch (Exception e) { currentStage.result='STABLE'}
+							} catch (Exception e) {}
 						}  
                 }
             }
