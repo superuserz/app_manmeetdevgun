@@ -1,3 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubernetes-cluster-manmeetdevgun
+  labels:
+    name: kubernetes-cluster-manmeetdevgun
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
