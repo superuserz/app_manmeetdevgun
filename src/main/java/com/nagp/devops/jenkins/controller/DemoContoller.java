@@ -13,6 +13,6 @@ public class DemoContoller {
 	
 	@GetMapping("/hello")
 	public String getServerMessage() {
-		return "Hello From Master Branch";
+		return "Hello From Develop Branch";
 	}
 }
