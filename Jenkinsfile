@@ -24,6 +24,8 @@ pipeline {
         
         //////////KUBERNETES-CONFIGS/////////
 		KUBERNETES_DEPLOYMENTFILE = 'deployment.yml'
+		KUBERNETES_MASTERPORT = '30157'
+		KUBERNETES_DEVELOPPORT = '30158'
 		GCE_PROJECTID = 'calcium-rigging-322119'
 		GCE_CLUSTER = 'nagp-k8s-jenkins-cluster'
 		GCE_CLUSTERLOCATION = 'asia-south1-a'
@@ -159,15 +161,6 @@ pipeline {
         stage('Kubernetes Deployment'){
             steps{
                 script{
-                    def kubernetesMasterPort = '30157'
-                    def kubernetesDevelopPort = '30158'
-                    def firewallRuleName = ''
-                    if(params.Branch == 'master'){
-                        firewallRuleName = 'master-node-port'
-                    }
-                    if(params.Branch == 'develop'){
-                        firewallRuleName = 'develop-node-port'
-                    }
                     
                     withCredentials([file(credentialsId: 'gcesakey', variable: 'gcesakey')]) {      //gcesakey refers to the service account key for GCE service account.
                                                                                                     //Ensure NOT to commit the SA key to any public repo.
@@ -178,30 +171,22 @@ pipeline {
 
                     bat "gcloud container clusters get-credentials ${GCE_CLUSTER} --zone ${GCE_CLUSTERLOCATION} --project ${GCE_PROJECTID}"  //connect to the gcloud kubernetes cluster.
                     
-                    bat "kubectl apply -f ${KUBERNETES_DEPLOYMENTFILE}"
+                    bat "kubectl apply -f ${KUBERNETES_DEPLOYMENTFILE}"  // Apply the deployment.
                     
-                    bat "kubectl set image deployment i-${USERNAME}-${params.Branch} i-${USERNAME}-${params.Branch}=${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1"
-                    
-                    }
-            
-                /*    step([$class: 'KubernetesEngineBuilder', projectId: env.GCE_PROJECTID, clusterName: env.GCE_CLUSTER, location: env.GCE_CLUSTERLOCATION, manifestPattern: env.KUBERNETES_DEPLOYMENTFILE, credentialsId: env.GCE_JENKINS_SA_KEY])
-                    try{
+                    bat "kubectl set image deployment i-${USERNAME}-${params.Branch} i-${USERNAME}-${params.Branch}=${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1"  //set the deployment with build image.
+					
+						try {
+							if(params.Branch == 'master'){
+								bat "gcloud compute firewall-rules create master-node-port --allow tcp:${KUBERNETES_MASTERPORT} --project ${GCE_PROJECTID}"   //Set appropraie firewall Rile to connect to VM
+							}
                         
-                        if(params.Branch == 'master'){
-                            bat "gcloud compute firewall-rules create ${firewallRuleName} --allow tcp:${kubernetesMasterPort} --project ${GCE_PROJECTID}"   //Set appropraie firewall Rile to connect to VM
-                        }
-                        
-                        if(params.Branch == 'develop'){
-                            bat "gcloud compute firewall-rules create ${firewallRuleName} --allow tcp:${kubernetesDevelopPort} --project ${GCE_PROJECTID}"  //Set appropraie firewall Rile to connect to VM
-                        }
-                        
-                        
-                        
-                    }catch(Exception e){
-                        //catching exception in case firewall rule already exists
-                    }*/
+							if(params.Branch == 'develop'){
+                            bat "gcloud compute firewall-rules create develop-node-port --allow tcp:${KUBERNETES_DEVELOPPORT} --project ${GCE_PROJECTID}"  //Set appropraie firewall Rile to connect to VM
+							}  
+							} catch (Exception e) { currentStage.result='STABLE'}
+						}  
                 }
             }
-        } 
+        } //Kubernetes Stage end
     } //stages
 }//pipline
