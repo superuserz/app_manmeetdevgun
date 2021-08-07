@@ -26,6 +26,7 @@ pipeline {
 		KUBERNETES_DEPLOYMENTFILE = 'deployment.yml'
 		KUBERNETES_MASTERPORT = '30157'
 		KUBERNETES_DEVELOPPORT = '30158'
+		KUBERNETES_NAMESPACE = 'kubernetes-cluster-manmeetdevgun'
 		GCE_PROJECTID = 'calcium-rigging-322119'
 		GCE_CLUSTER = 'nagp-k8s-jenkins-cluster'
 		GCE_CLUSTERLOCATION = 'asia-south1-a'
@@ -167,6 +168,8 @@ pipeline {
                     bat "gcloud container clusters get-credentials ${GCE_CLUSTER} --zone ${GCE_CLUSTERLOCATION} --project ${GCE_PROJECTID}"  //connect to the gcloud kubernetes cluster.
                     
                     bat "kubectl apply -f ${KUBERNETES_DEPLOYMENTFILE}"  // Apply the deployment.
+					
+					bat "kubectl config set-context --current --namespace=${KUBERNETES_NAMESPACE}" //set name-space
                     
                     bat "kubectl set image deployment i-${USERNAME}-${env.BRANCH_NAME} i-${USERNAME}-${env.BRANCH_NAME}=${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"  //set the deployment with build image.
 					
