@@ -6,7 +6,7 @@ metadata:
   name: i-manmeetdevgun-master
   namespace: default
 spec:
-  replicas: 2
+  replicas: 4
   selector:
     matchLabels:
       app: i-manmeetdevgun-master

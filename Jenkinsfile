@@ -15,9 +15,9 @@ pipeline {
         jacocoXMLCoveragePath='target/site/jacoco/jacoco.xml'  //path to coverage report
         //////////KUBERNETES-CONFIGS/////////
         deploymentfile = 'deployment.yml'
-        projectId = 'carbon-airlock-321321'
+        projectId = 'calcium-rigging-322119'
         clusterName = 'nagp-k8s-jenkins-cluster'
-        clusterLocation = 'us-central1-c'
+        clusterLocation = 'asia-south1-a'
         serviceAccountKey = 'gke'
     }
     agent any
