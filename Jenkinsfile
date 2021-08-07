@@ -45,11 +45,7 @@ pipeline {
         skipStagesAfterUnstable() 
     }
     
-    parameters {
-        choice(name: 'Branch', choices: ['master', 'develop'], description: 'Select Branch')
-    }
     //Decalare Stages below this
-    
     stages {
         
         stage('Checkout') {
@@ -57,8 +53,7 @@ pipeline {
                 
                 script {
                     
-                    def checkoutBranch = params.Branch;
-                    git poll: true, url: GITURL, branch: checkoutBranch
+                    git poll: true, url: GITURL, branch: env.BRANCH_NAME
                 }
             }
         } //Checkout Stage End.  
@@ -75,7 +70,7 @@ pipeline {
         
         stage('Unit Testing') {
             when {
-                expression { params.Branch == 'master' }
+                expression { env.BRANCH_NAME == 'master' }
             }
             steps {
                 bat 'mvn test'
@@ -84,7 +79,7 @@ pipeline {
         
         stage('Sonar Analysis') {
             when {
-                expression { params.Branch == 'develop' }
+                expression { env.BRANCH_NAME == 'develop' }
             }
             
             steps  {
@@ -102,7 +97,7 @@ pipeline {
         stage('Build Docker Image') {
                 steps {
                     script {
-                        bat "docker build -t ${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1 ."
+                        bat "docker build -t ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1 ."
                     }
                 }
         } //Build Docker Stage End
@@ -117,7 +112,7 @@ pipeline {
                                     withCredentials([usernamePassword(credentialsId: 'DockerHub', passwordVariable: 'dockerpassword', usernameVariable: 'dockerusername')]) {
                                         bat "docker login -u ${dockerusername} -p ${dockerpassword}"
                                         
-                                        bat "docker push ${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1"
+                                        bat "docker push ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"
                                     }
                                 }
                            } 
@@ -128,9 +123,9 @@ pipeline {
                     steps {
                         script {
                             try {
-                                    bat "docker stop c-${USERNAME}-${params.Branch}"   // stop already running container
+                                    bat "docker stop c-${USERNAME}-${env.BRANCH_NAME}"   // stop already running container
                                     
-                                    bat "docker container rm c-${USERNAME}-${params.Branch}"  // remove the old container
+                                    bat "docker container rm c-${USERNAME}-${env.BRANCH_NAME}"  // remove the old container
                                     
 			                        sleep 5 //seconds //give some time for container to stop.
                                 } catch (Exception err) {
@@ -145,12 +140,12 @@ pipeline {
             steps {
                 script {
                         
-                        if (params.Branch == 'master') {
-                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_MASTER_PORT}:8080 --name c-${USERNAME}-${params.Branch} ${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1"
+                        if (env.BRANCH_NAME == 'master') {
+                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_MASTER_PORT}:8080 --name c-${USERNAME}-${env.BRANCH_NAME} ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"
                             //Run the New image on Docker instance
                         }   
-                        if (params.Branch == 'develop') {
-                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_DEVELOP_PORT}:8080 --name c-${USERNAME}-${params.Branch} ${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1"
+                        if (env.BRANCH_NAME == 'develop') {
+                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_DEVELOP_PORT}:8080 --name c-${USERNAME}-${env.BRANCH_NAME} ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"
                             //Run the New image on Docker instance
                             
                         }
@@ -173,14 +168,14 @@ pipeline {
                     
                     bat "kubectl apply -f ${KUBERNETES_DEPLOYMENTFILE}"  // Apply the deployment.
                     
-                    bat "kubectl set image deployment i-${USERNAME}-${params.Branch} i-${USERNAME}-${params.Branch}=${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1"  //set the deployment with build image.
+                    bat "kubectl set image deployment i-${USERNAME}-${env.BRANCH_NAME} i-${USERNAME}-${env.BRANCH_NAME}=${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"  //set the deployment with build image.
 					
 						try {
-							if(params.Branch == 'master'){
+							if(env.BRANCH_NAME == 'master'){
 								bat "gcloud compute firewall-rules create master-node-port --allow tcp:${KUBERNETES_MASTERPORT} --project ${GCE_PROJECTID}"   //Set appropraie firewall Rile to connect to VM
 							}
                         
-							if(params.Branch == 'develop'){
+							if(env.BRANCH_NAME == 'develop'){
                             bat "gcloud compute firewall-rules create develop-node-port --allow tcp:${KUBERNETES_DEVELOPPORT} --project ${GCE_PROJECTID}"  //Set appropraie firewall Rile to connect to VM
 							}  
 							} catch (Exception e) { currentStage.result='STABLE'}
