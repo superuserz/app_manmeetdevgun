@@ -4,7 +4,7 @@ metadata:
   labels:
     app: i-manmeetdevgun-develop
   name: i-manmeetdevgun-develop
-  namespace: default
+  namespace: kubernetes-cluster-manmeetdevgun
 spec:
   replicas: 4
   selector:
@@ -35,7 +35,7 @@ metadata:
   labels:
     app: i-manmeetdevgun-develop
   name: i-manmeetdevgun-develop
-  namespace: default
+  namespace: kubernetes-cluster-manmeetdevgun
 spec:
   ports:
   - nodePort: 32755
