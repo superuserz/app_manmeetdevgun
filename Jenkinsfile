@@ -97,7 +97,7 @@ pipeline {
         stage('Build Docker Image') {
                 steps {
                     script {
-                        bat "docker build -t ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1 ."
+                        bat "docker build -t ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1 --build-arg JAR_FILE=target/nagp-devops-0.0.1-SNAPSHOT.jar ."
                     }
                 }
         } //Build Docker Stage End
