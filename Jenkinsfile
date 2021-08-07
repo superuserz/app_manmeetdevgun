@@ -1,27 +1,35 @@
+
 pipeline {
     environment { 
+	
+		USERNAME='manmeetdevgun'
 
-        dockerImage = ''
-        dockerContainerMasterPort = '7200'
-        dockerContainerDevelopPort = '7300'
-        gitUrl = 'https://github.com/superuserz/app_manmeetdevgun.git'
-        sonarInstallationName = 'Test_Sonar'
-        sonarProjectKey='sonar-manmeetdevgun'
-        sonarHost='http://localhost:9000'
-        sonarToken='c1084e0ae20a2a86ee4ba7001da3d9d8575411e7'
-        dockerCredentialsId='DockerHub'
-        username='manmeetdevgun'
-        dockerhubUsername='superuserz'
-        jacocoXMLCoveragePath='target/site/jacoco/jacoco.xml'
+		/////////GIT-CONFIGS///////////
+		GITURL = 'https://github.com/superuserz/app_manmeetdevgun.git'
+		
+		
+		////////SONAR-CONFIGS/////////
+		SONAR_INSTALLATION = 'Test_Sonar'
+        SONAR_PROJECTKEY = 'sonar-manmeetdevgun'
+        SONAR_HOST = 'http://localhost:9000'
+        SONAR_TOKEN = 'c1084e0ae20a2a86ee4ba7001da3d9d8575411e7'
+		SONAR_COVERAGEPATH = 'target/site/jacoco/jacoco.xml'
+		
+		////////DOCKER-CONFIGS////////
+        DOCKER_CONTAINER_MASTER_PORT = '7200'
+        DOCKER_CONTAINER_DEVELOP_PORT = '7300'
+		DOCKER_REPO = 'superuserz'
+		
+
         
         //////////KUBERNETES-CONFIGS/////////
-        deploymentfile = 'deployment.yml'
-        projectId = 'calcium-rigging-322119'
-        clusterName = 'nagp-k8s-jenkins-cluster'
-        clusterLocation = 'asia-south1-a'
-        serviceAccountKey = 'gke'
-        gceAccount = 'manmeet.devgun3152707@gmail.com'
-        serviceAccountKeyFile = 'gce.json'
+		KUBERNETES_DEPLOYMENTFILE = 'deployment.yml'
+		GCE_PROJECTID = 'calcium-rigging-322119'
+		GCE_CLUSTER = 'nagp-k8s-jenkins-cluster'
+		GCE_CLUSTERLOCATION = 'asia-south1-a'
+		GCE_JENKINS_SA_KEY = 'gke'
+		GCE_ACCOUNT = 'manmeet.devgun3152707@gmail.com'
+
     }
     agent any
     
@@ -35,6 +43,11 @@ pipeline {
         skipStagesAfterUnstable() 
     }
     
+    parameters {
+        choice(name: 'Branch', choices: ['master', 'develop'], description: 'Select Branch')
+    }
+    //Decalare Stages below this
+    
     stages {
         
         stage('Checkout') {
@@ -42,9 +55,8 @@ pipeline {
                 
                 script {
                     
-                    def checkoutBranch = env.BRANCH_NAME;
-                    git poll: true, url: gitUrl, branch: checkoutBranch
-                    bat 'dir'
+                    def checkoutBranch = params.Branch;
+                    git poll: true, url: GITURL, branch: checkoutBranch
                 }
             }
         } //Checkout Stage End.  
@@ -61,7 +73,7 @@ pipeline {
         
         stage('Unit Testing') {
             when {
-                expression { env.BRANCH_NAME == 'master' }
+                expression { params.Branch == 'master' }
             }
             steps {
                 bat 'mvn test'
@@ -70,26 +82,25 @@ pipeline {
         
         stage('Sonar Analysis') {
             when {
-                expression { env.BRANCH_NAME == 'develop' }
+                expression { params.Branch == 'develop' }
             }
             
             steps  {
-                            withSonarQubeEnv(sonarInstallationName) {       //Run Sonar Qube Analysis. For Quality gate, you need to setup up a webhook in sonar. Not in scope of this assignment.
+                            withSonarQubeEnv(SONAR_INSTALLATION) {       //Run Sonar Qube Analysis. For Quality gate, you need to setup up a webhook in sonar. Not in scope of this assignment.
                             bat "mvn package sonar:sonar \
-  				                -Dsonar.host.url=${sonarHost} \
-				                -Dsonar.projectKey=${sonarProjectKey} \
-				                -Dsonar.login=${sonarToken} \
-                                -Dsonar.coverage.jacoco.xmlReportPaths=${jacocoXMLCoveragePath} \
+  				                -Dsonar.host.url=${SONAR_HOST} \
+				                -Dsonar.projectKey=${SONAR_PROJECTKEY} \
+				                -Dsonar.login=${SONAR_TOKEN} \
+                                -Dsonar.coverage.jacoco.xmlReportPaths=${SONAR_COVERAGEPATH} \
                                 -Dsonar.java.binaries=src/main/java"
                             }
             }
         } //Sonar Analysis Stage End.
         
-        stage('Docker Image') {
+        stage('Build Docker Image') {
                 steps {
                     script {
-                     dockerImage = docker.build("${dockerhubUsername}/i-${username}-${env.BRANCH_NAME}:v1")
-                     //Build the Docker Image
+                        bat "docker build -t ${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1 ."
                     }
                 }
         } //Build Docker Stage End
@@ -101,11 +112,13 @@ pipeline {
                     agent any
                     steps  {
                         script  { 
-                                docker.withRegistry( '', dockerCredentialsId ) { 
-                                dockerImage.push()          //Push the image to Docker Hub
+                                    withCredentials([usernamePassword(credentialsId: 'DockerHub', passwordVariable: 'dockerpassword', usernameVariable: 'dockerusername')]) {
+                                        bat "docker login -u ${dockerusername} -p ${dockerpassword}"
+                                        
+                                        bat "docker push ${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1"
+                                    }
                                 }
                            } 
-                    }
                 }
                 
                 stage('Pre-container Check') {
@@ -113,10 +126,10 @@ pipeline {
                     steps {
                         script {
                             try {
-                                    // stop already running container
-                                    bat "docker stop c-${username}-${env.BRANCH_NAME}"
-                                    // remove the old container
-                                    bat "docker container rm c-${username}-${env.BRANCH_NAME}"
+                                    bat "docker stop c-${USERNAME}-${params.Branch}"   // stop already running container
+                                    
+                                    bat "docker container rm c-${USERNAME}-${params.Branch}"  // remove the old container
+                                    
 			                        sleep 5 //seconds //give some time for container to stop.
                                 } catch (Exception err) {
                                     //If no container with same name is running, this step will throw an exceptoin. Handle it and do Nothing.
@@ -130,12 +143,12 @@ pipeline {
             steps {
                 script {
                         
-                        if (env.BRANCH_NAME == 'master') {
-                            bat "docker run --pull=allways -itd -p ${dockerContainerMasterPort}:8080 --name c-${username}-${env.BRANCH_NAME} ${dockerhubUsername}/i-${username}-${env.BRANCH_NAME}:v1"
+                        if (params.Branch == 'master') {
+                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_MASTER_PORT}:8080 --name c-${USERNAME}-${params.Branch} ${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1"
                             //Run the New image on Docker instance
                         }   
-                        if (env.BRANCH_NAME == 'develop') {
-                            bat "docker run --pull=allways -itd -p ${dockerContainerDevelopPort}:8080 --name c-${username}-${env.BRANCH_NAME} ${dockerhubUsername}/i-${username}-${env.BRANCH_NAME}:v1"
+                        if (params.Branch == 'develop') {
+                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_DEVELOP_PORT}:8080 --name c-${USERNAME}-${params.Branch} ${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1"
                             //Run the New image on Docker instance
                             
                         }
@@ -149,38 +162,44 @@ pipeline {
                     def kubernetesMasterPort = '30157'
                     def kubernetesDevelopPort = '30158'
                     def firewallRuleName = ''
-                    if(env.BRANCH_NAME == 'master'){
+                    if(params.Branch == 'master'){
                         firewallRuleName = 'master-node-port'
                     }
-                    if(env.BRANCH_NAME == 'develop'){
+                    if(params.Branch == 'develop'){
                         firewallRuleName = 'develop-node-port'
                     }
                     
                     withCredentials([file(credentialsId: 'gcesakey', variable: 'gcesakey')]) {      //gcesakey refers to the service account key for GCE service account.
                                                                                                     //Ensure NOT to commit the SA key to any public repo.
                         
-                    bat "gcloud config set account ${gceAccount}"               //Set gcloud to correct google-account.
+                    bat "gcloud config set account ${GCE_ACCOUNT}"               //Set gcloud to correct google-account.
                     
                     bat "gcloud auth activate-service-account --key-file $gcesakey"         //Set gcloud to correct google-account's service account.
 
-                    bat "gcloud container clusters get-credentials ${clusterName} --zone ${clusterLocation} --project ${projectId}"  //connect to the gcloud kubernetes cluster.
+                    bat "gcloud container clusters get-credentials ${GCE_CLUSTER} --zone ${GCE_CLUSTERLOCATION} --project ${GCE_PROJECTID}"  //connect to the gcloud kubernetes cluster.
+                    
+                    bat "kubectl apply -f ${KUBERNETES_DEPLOYMENTFILE}"
+                    
+                    bat "kubectl set image deployment i-${USERNAME}-${params.Branch} i-${USERNAME}-${params.Branch}=${DOCKER_REPO}/i-${USERNAME}-${params.Branch}:v1"
                     
                     }
             
-                    step([$class: 'KubernetesEngineBuilder', projectId: env.projectId, clusterName: env.clusterName, location: env.clusterLocation, manifestPattern: env.deploymentfile, credentialsId: env.serviceAccountKey])
+                /*    step([$class: 'KubernetesEngineBuilder', projectId: env.GCE_PROJECTID, clusterName: env.GCE_CLUSTER, location: env.GCE_CLUSTERLOCATION, manifestPattern: env.KUBERNETES_DEPLOYMENTFILE, credentialsId: env.GCE_JENKINS_SA_KEY])
                     try{
                         
-                        if(env.BRANCH_NAME == 'master'){
-                            bat "gcloud compute firewall-rules create ${firewallRuleName} --allow tcp:${kubernetesMasterPort} --project ${projectId}"   //Set appropraie firewall Rile to connect to VM
+                        if(params.Branch == 'master'){
+                            bat "gcloud compute firewall-rules create ${firewallRuleName} --allow tcp:${kubernetesMasterPort} --project ${GCE_PROJECTID}"   //Set appropraie firewall Rile to connect to VM
                         }
                         
-                        if(env.BRANCH_NAME == 'develop'){
-                            bat "gcloud compute firewall-rules create ${firewallRuleName} --allow tcp:${kubernetesDevelopPort} --project ${projectId}"  //Set appropraie firewall Rile to connect to VM
+                        if(params.Branch == 'develop'){
+                            bat "gcloud compute firewall-rules create ${firewallRuleName} --allow tcp:${kubernetesDevelopPort} --project ${GCE_PROJECTID}"  //Set appropraie firewall Rile to connect to VM
                         }
+                        
+                        
                         
                     }catch(Exception e){
                         //catching exception in case firewall rule already exists
-                    }
+                    }*/
                 }
             }
         } 
