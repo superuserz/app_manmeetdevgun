@@ -160,7 +160,7 @@ pipeline {
                     
                     bat "kubectl apply -f ${KUBERNETES_DEPLOYMENTFILE}"  // Apply the deployment.
 			    
-	            sleep 15  //Give the cluster sometime to apply the deployment for Patching it with new image.
+	            sleep 30  //Give the cluster sometime to apply the deployment for Patching it with new image.
 					
 		    bat "kubectl config set-context --current --namespace=${KUBERNETES_NAMESPACE}" //set name-space
 			    
