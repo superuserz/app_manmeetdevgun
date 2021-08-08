@@ -81,9 +81,9 @@ pipeline {
                 expression { env.BRANCH_NAME == 'develop' }
             }
             
-            steps  {
+            steps  {	    //Host and Token will be picked by Test_Sonar installation configuration in jenkins.
                             withSonarQubeEnv(SONAR_INSTALLATION) {       //Run Sonar Qube Analysis. For Quality gate, you need to setup up a webhook in sonar. Not in scope of this assignment.
-                            bat "mvn package sonar:sonar \               //Host and Token will be picked by Test_Sonar installation configuration in jenkins.
+                            bat "mvn package sonar:sonar \               
 				-Dsonar.projectKey=${SONAR_PROJECTKEY} \    
                                 -Dsonar.coverage.jacoco.xmlReportPaths=${SONAR_COVERAGEPATH} \
                                 -Dsonar.java.binaries=src/main/java"
