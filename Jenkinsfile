@@ -160,11 +160,11 @@ pipeline {
                     
                     bat "kubectl apply -f ${KUBERNETES_DEPLOYMENTFILE}"  // Apply the deployment.
 			    
-	            sleep 30  //Give the cluster sometime to apply the deployment for Patching it with new image.
+	            sleep 70  //Give the cluster sometime to start the pods with default image & then apply the image with current commit/buildnumber/tag.
+			      //This is only for demo purpose. In Ideal scenario we can have a properties file holding the commitid and replace it dynamically in deployment.yml
+			      //in that case sleep will not be required.
 					
 		    bat "kubectl config set-context --current --namespace=${KUBERNETES_NAMESPACE}" //set name-space
-			    
-	            sleep 15  //Give some time for the ports to get Freed, otherwise port already in use error can occur.
                     
                     bat "kubectl set image deployment i-${USERNAME}-${env.BRANCH_NAME} i-${USERNAME}-${env.BRANCH_NAME}=${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID}"  //set the deployment with build image.
 					
