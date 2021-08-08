@@ -1,3 +1,4 @@
+def COMMITID
 pipeline {
     environment { 
 	
@@ -52,6 +53,8 @@ pipeline {
                 script {
                     
                     git poll: true, url: GITURL, branch: env.BRANCH_NAME
+		    def shortCommit = bat( label: 'Get Short Commit', returnStdout: true, script: "git rev-parse --verify origin/${env.BRANCH_NAME}"  )
+                    COMMITID = shortCommit[-7..-1]
                 }
             }
         } //Checkout Stage End.  
@@ -86,7 +89,7 @@ pipeline {
         stage('Build Docker Image') {
                 steps {
                     script {
-                        bat "docker build -t ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1 --build-arg JAR_FILE=target/nagp-devops-0.0.1-SNAPSHOT.jar ."
+			    bat "docker build -t ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID} --build-arg JAR_FILE=target/nagp-devops-0.0.1-SNAPSHOT.jar ."
                     }
                 }
         } //Build Docker Stage End
