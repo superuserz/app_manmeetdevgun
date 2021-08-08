@@ -54,7 +54,7 @@ pipeline {
                     
                     git poll: true, url: GITURL, branch: env.BRANCH_NAME
 		    def shortCommit = bat( label: 'Get Short Commit', returnStdout: true, script: "git rev-parse --verify origin/${env.BRANCH_NAME}"  )
-                    COMMITID = shortCommit[-7..-1]
+                    COMMITID = shortCommit[-7..-1].trim()
                 }
             }
         } //Checkout Stage End.  
