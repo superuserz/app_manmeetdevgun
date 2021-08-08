@@ -1,4 +1,3 @@
-
 pipeline {
     environment { 
 	
@@ -20,7 +19,7 @@ pipeline {
 		
 
         
-        //////////KUBERNETES-CONFIGS/////////
+        	//////////KUBERNETES-CONFIGS/////////
 		KUBERNETES_DEPLOYMENTFILE = 'deployment.yml'
 		KUBERNETES_MASTERPORT = '30157'
 		KUBERNETES_DEVELOPPORT = '30158'
@@ -59,11 +58,8 @@ pipeline {
         
         stage('Build') {
             steps {
-                echo "M2_HOME = ${M2_HOME}"
-                echo "${env.BRANCH_NAME}"
                 bat 'mvn -B -DskipTests clean package'  //Build the Project
                 bat 'mvn verify'        //Generate jcocco reports
-                bat 'dir target'
             }
         } //Build Stage End.
         
@@ -80,7 +76,6 @@ pipeline {
             when {
                 expression { env.BRANCH_NAME == 'develop' }
             }
-            
             steps  {	    //Host and Token will be picked by Test_Sonar installation configuration in jenkins.
                             withSonarQubeEnv(SONAR_INSTALLATION) {       //Run Sonar Qube Analysis. For Quality gate, you need to setup up a webhook in sonar. Not in scope of this assignment.
                             bat "mvn package sonar:sonar -Dsonar.projectKey=${SONAR_PROJECTKEY} -Dsonar.coverage.jacoco.xmlReportPaths=${SONAR_COVERAGEPATH} -Dsonar.java.binaries=src/main/java"
@@ -166,16 +161,18 @@ pipeline {
                     
                     bat "kubectl set image deployment i-${USERNAME}-${env.BRANCH_NAME} i-${USERNAME}-${env.BRANCH_NAME}=${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"  //set the deployment with build image.
 					
-						try {
-							if(env.BRANCH_NAME == 'master'){
-								bat "gcloud compute firewall-rules create master-node-port --allow tcp:${KUBERNETES_MASTERPORT} --project ${GCE_PROJECTID}"   //Set appropraie firewall Rile to connect to VM
-								}
+		    try {
+			  if(env.BRANCH_NAME == 'master')
+			    {
+			      bat "gcloud compute firewall-rules create master-node-port --allow tcp:${KUBERNETES_MASTERPORT} --project ${GCE_PROJECTID}"   //Set appropraie firewall Rile to connect to VM
+			    }
                         
-							if(env.BRANCH_NAME == 'develop'){
-                    bat "gcloud compute firewall-rules create develop-node-port --allow tcp:${KUBERNETES_DEVELOPPORT} --project ${GCE_PROJECTID}"  //Set appropraie firewall Rile to connect to VM
-								}  
-						    } catch (Exception e) {}
-						}  
+			    if(env.BRANCH_NAME == 'develop')
+			    {
+                    	      bat "gcloud compute firewall-rules create develop-node-port --allow tcp:${KUBERNETES_DEVELOPPORT} --project ${GCE_PROJECTID}"  //Set appropraie firewall Rile to connect to VM
+			    }  
+			} catch (Exception e) {}
+		    }  
                 }
             }
         } //Kubernetes Stage end
