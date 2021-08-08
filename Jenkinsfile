@@ -1,3 +1,4 @@
+def COMMITID
 pipeline {
     environment { 
 	
@@ -52,6 +53,8 @@ pipeline {
                 script {
                     
                     git poll: true, url: GITURL, branch: env.BRANCH_NAME
+		    def shortCommit = bat( label: 'Get Short Commit', returnStdout: true, script: "git rev-parse --verify origin/${env.BRANCH_NAME}"  )
+                    COMMITID = shortCommit[-7..-1].trim()  //Get the Git Short Commit ID. Will be used as deployed version/tag of image. Helps to correlate image with git commit.
                 }
             }
         } //Checkout Stage End.  
@@ -86,7 +89,7 @@ pipeline {
         stage('Build Docker Image') {
                 steps {
                     script {
-                        bat "docker build -t ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1 --build-arg JAR_FILE=target/nagp-devops-0.0.1-SNAPSHOT.jar ."
+			    bat "docker build -t ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID} --build-arg JAR_FILE=target/nagp-devops-0.0.1-SNAPSHOT.jar ."
                     }
                 }
         } //Build Docker Stage End
@@ -101,7 +104,7 @@ pipeline {
                                     withCredentials([usernamePassword(credentialsId: 'DockerHub', passwordVariable: 'dockerpassword', usernameVariable: 'dockerusername')]) {
                                         bat "docker login -u ${dockerusername} -p ${dockerpassword}"
                                         
-                                        bat "docker push ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"
+                                        bat "docker push ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID}"
                                     }
                                 }
                            } 
@@ -116,7 +119,7 @@ pipeline {
                                     
                                     bat "docker container rm c-${USERNAME}-${env.BRANCH_NAME}"  // remove the old container
                                     
-			                        sleep 5 //seconds //give some time for container to stop.
+			            sleep 5 //seconds //give some time for container to stop.
                                 } catch (Exception err) {
                                     //If no container with same name is running, this step will throw an exceptoin. Handle it and do Nothing.
                                 }
@@ -130,11 +133,11 @@ pipeline {
                 script {
                         
                         if (env.BRANCH_NAME == 'master') {
-                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_MASTER_PORT}:8080 --name c-${USERNAME}-${env.BRANCH_NAME} ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"
+                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_MASTER_PORT}:8080 --name c-${USERNAME}-${env.BRANCH_NAME} ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID}"
                             //Run the New image on Docker instance
                         }   
                         if (env.BRANCH_NAME == 'develop') {
-                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_DEVELOP_PORT}:8080 --name c-${USERNAME}-${env.BRANCH_NAME} ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"
+                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_DEVELOP_PORT}:8080 --name c-${USERNAME}-${env.BRANCH_NAME} ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID}"
                             //Run the New image on Docker instance
                             
                         }
@@ -156,10 +159,14 @@ pipeline {
                     bat "gcloud container clusters get-credentials ${GCE_CLUSTER} --zone ${GCE_CLUSTERLOCATION} --project ${GCE_PROJECTID}"  //connect to the gcloud kubernetes cluster.
                     
                     bat "kubectl apply -f ${KUBERNETES_DEPLOYMENTFILE}"  // Apply the deployment.
+			    
+	            sleep 70  //Give the cluster sometime to start the pods with default image & then apply the image with current commit/buildnumber/tag.
+			      //This is only for demo purpose. In Ideal scenario we can have a properties file holding the commitid and replace it dynamically in deployment.yml
+			      //in that case sleep will not be required.
 					
 		    bat "kubectl config set-context --current --namespace=${KUBERNETES_NAMESPACE}" //set name-space
                     
-                    bat "kubectl set image deployment i-${USERNAME}-${env.BRANCH_NAME} i-${USERNAME}-${env.BRANCH_NAME}=${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"  //set the deployment with build image.
+                    bat "kubectl set image deployment i-${USERNAME}-${env.BRANCH_NAME} i-${USERNAME}-${env.BRANCH_NAME}=${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID}"  //set the deployment with build image.
 					
 		    try {
 			  if(env.BRANCH_NAME == 'master')
