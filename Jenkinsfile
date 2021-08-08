@@ -54,7 +54,7 @@ pipeline {
                     
                     git poll: true, url: GITURL, branch: env.BRANCH_NAME
 		    def shortCommit = bat( label: 'Get Short Commit', returnStdout: true, script: "git rev-parse --verify origin/${env.BRANCH_NAME}"  )
-                    COMMITID = shortCommit[-7..-1].trim()
+                    COMMITID = shortCommit[-7..-1].trim()  //Get the Git Short Commit ID. Will be used as deployed version/tag of image. Helps to correlate image with git commit.
                 }
             }
         } //Checkout Stage End.  
@@ -104,7 +104,7 @@ pipeline {
                                     withCredentials([usernamePassword(credentialsId: 'DockerHub', passwordVariable: 'dockerpassword', usernameVariable: 'dockerusername')]) {
                                         bat "docker login -u ${dockerusername} -p ${dockerpassword}"
                                         
-                                        bat "docker push ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"
+                                        bat "docker push ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID}"
                                     }
                                 }
                            } 
@@ -133,11 +133,11 @@ pipeline {
                 script {
                         
                         if (env.BRANCH_NAME == 'master') {
-                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_MASTER_PORT}:8080 --name c-${USERNAME}-${env.BRANCH_NAME} ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"
+                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_MASTER_PORT}:8080 --name c-${USERNAME}-${env.BRANCH_NAME} ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID}"
                             //Run the New image on Docker instance
                         }   
                         if (env.BRANCH_NAME == 'develop') {
-                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_DEVELOP_PORT}:8080 --name c-${USERNAME}-${env.BRANCH_NAME} ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"
+                            bat "docker run --pull=allways -itd -p ${DOCKER_CONTAINER_DEVELOP_PORT}:8080 --name c-${USERNAME}-${env.BRANCH_NAME} ${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID}"
                             //Run the New image on Docker instance
                             
                         }
@@ -162,7 +162,7 @@ pipeline {
 					
 		    bat "kubectl config set-context --current --namespace=${KUBERNETES_NAMESPACE}" //set name-space
                     
-                    bat "kubectl set image deployment i-${USERNAME}-${env.BRANCH_NAME} i-${USERNAME}-${env.BRANCH_NAME}=${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"  //set the deployment with build image.
+                    bat "kubectl set image deployment i-${USERNAME}-${env.BRANCH_NAME} i-${USERNAME}-${env.BRANCH_NAME}=${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID}"  //set the deployment with build image.
 					
 		    try {
 			  if(env.BRANCH_NAME == 'master')
