@@ -163,6 +163,8 @@ pipeline {
 	            sleep 15  //Give the cluster sometime to apply the deployment for Patching it with new image.
 					
 		    bat "kubectl config set-context --current --namespace=${KUBERNETES_NAMESPACE}" //set name-space
+			    
+	            sleep 15  //Give some time for the ports to get Freed, otherwise port already in use error can occur.
                     
                     bat "kubectl set image deployment i-${USERNAME}-${env.BRANCH_NAME} i-${USERNAME}-${env.BRANCH_NAME}=${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:${COMMITID}"  //set the deployment with build image.
 					
