@@ -1,4 +1,3 @@
-
 pipeline {
     environment { 
 	
@@ -10,14 +9,12 @@ pipeline {
 		
 		////////SONAR-CONFIGS/////////
 		SONAR_INSTALLATION = 'Test_Sonar'
-        SONAR_PROJECTKEY = 'sonar-manmeetdevgun'
-        SONAR_HOST = 'http://localhost:9000'
-        SONAR_TOKEN = 'c1084e0ae20a2a86ee4ba7001da3d9d8575411e7'
+        	SONAR_PROJECTKEY = 'sonar-manmeetdevgun'
 		SONAR_COVERAGEPATH = 'target/site/jacoco/jacoco.xml'
 		
 		////////DOCKER-CONFIGS////////
-        DOCKER_CONTAINER_MASTER_PORT = '7200'
-        DOCKER_CONTAINER_DEVELOP_PORT = '7300'
+        	DOCKER_CONTAINER_MASTER_PORT = '7200'
+        	DOCKER_CONTAINER_DEVELOP_PORT = '7300'
 		DOCKER_REPO = 'superuserz'
 		
 
@@ -83,14 +80,9 @@ pipeline {
                 expression { env.BRANCH_NAME == 'develop' }
             }
             
-            steps  {
+            steps  {	    //Host and Token will be picked by Test_Sonar installation configuration in jenkins.
                             withSonarQubeEnv(SONAR_INSTALLATION) {       //Run Sonar Qube Analysis. For Quality gate, you need to setup up a webhook in sonar. Not in scope of this assignment.
-                            bat "mvn package sonar:sonar \
-  				                -Dsonar.host.url=${SONAR_HOST} \
-				                -Dsonar.projectKey=${SONAR_PROJECTKEY} \
-				                -Dsonar.login=${SONAR_TOKEN} \
-                                -Dsonar.coverage.jacoco.xmlReportPaths=${SONAR_COVERAGEPATH} \
-                                -Dsonar.java.binaries=src/main/java"
+                            bat "mvn package sonar:sonar -Dsonar.projectKey=${SONAR_PROJECTKEY} -Dsonar.coverage.jacoco.xmlReportPaths=${SONAR_COVERAGEPATH} -Dsonar.java.binaries=src/main/java"
                             }
             }
         } //Sonar Analysis Stage End.
@@ -169,19 +161,19 @@ pipeline {
                     
                     bat "kubectl apply -f ${KUBERNETES_DEPLOYMENTFILE}"  // Apply the deployment.
 					
-					bat "kubectl config set-context --current --namespace=${KUBERNETES_NAMESPACE}" //set name-space
+		    bat "kubectl config set-context --current --namespace=${KUBERNETES_NAMESPACE}" //set name-space
                     
                     bat "kubectl set image deployment i-${USERNAME}-${env.BRANCH_NAME} i-${USERNAME}-${env.BRANCH_NAME}=${DOCKER_REPO}/i-${USERNAME}-${env.BRANCH_NAME}:v1"  //set the deployment with build image.
 					
 						try {
 							if(env.BRANCH_NAME == 'master'){
 								bat "gcloud compute firewall-rules create master-node-port --allow tcp:${KUBERNETES_MASTERPORT} --project ${GCE_PROJECTID}"   //Set appropraie firewall Rile to connect to VM
-							}
+								}
                         
 							if(env.BRANCH_NAME == 'develop'){
-                            bat "gcloud compute firewall-rules create develop-node-port --allow tcp:${KUBERNETES_DEVELOPPORT} --project ${GCE_PROJECTID}"  //Set appropraie firewall Rile to connect to VM
-							}  
-							} catch (Exception e) {}
+                    bat "gcloud compute firewall-rules create develop-node-port --allow tcp:${KUBERNETES_DEVELOPPORT} --project ${GCE_PROJECTID}"  //Set appropraie firewall Rile to connect to VM
+								}  
+						    } catch (Exception e) {}
 						}  
                 }
             }
