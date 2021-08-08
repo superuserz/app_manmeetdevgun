@@ -119,7 +119,7 @@ pipeline {
                                     
                                     bat "docker container rm c-${USERNAME}-${env.BRANCH_NAME}"  // remove the old container
                                     
-			                        sleep 5 //seconds //give some time for container to stop.
+			            sleep 5 //seconds //give some time for container to stop.
                                 } catch (Exception err) {
                                     //If no container with same name is running, this step will throw an exceptoin. Handle it and do Nothing.
                                 }
@@ -159,6 +159,8 @@ pipeline {
                     bat "gcloud container clusters get-credentials ${GCE_CLUSTER} --zone ${GCE_CLUSTERLOCATION} --project ${GCE_PROJECTID}"  //connect to the gcloud kubernetes cluster.
                     
                     bat "kubectl apply -f ${KUBERNETES_DEPLOYMENTFILE}"  // Apply the deployment.
+			    
+	            sleep 15  //Give the cluster sometime to apply the deployment for Patching it with new image.
 					
 		    bat "kubectl config set-context --current --namespace=${KUBERNETES_NAMESPACE}" //set name-space
                     
